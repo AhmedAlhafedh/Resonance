@@ -31,4 +31,4 @@ services:
       - key: VITE_BACKEND_URL
         fromService:
           name: resonance-backend
-          type: host
+          property: host
