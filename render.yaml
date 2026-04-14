@@ -30,6 +30,7 @@ services:
     envVars:
       - key: VITE_BACKEND_URL
         fromService:
-          type: host
+          type: web
           name: resonance-backend
+          property: host
           
