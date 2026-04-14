@@ -22,13 +22,14 @@ services:
         value: 3.12.2
 
   # 2. Frontend: Vite Static Site
-  - type: static
+  - type: web
     name: resonance-frontend
+    runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
       - key: VITE_BACKEND_URL
         fromService:
-          property: host
+          type: host
           name: resonance-backend
           
