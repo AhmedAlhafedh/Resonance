@@ -1,0 +1,33 @@
+# Render Blueprint Specification
+# Use this file to automatically deploy the full stack to Render.
+
+services:
+  # 1. Backend: FastAPI Web Service
+  - type: web
+    name: resonance-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false # Set in Render Dashboard
+      - key: AWS_ACCESS_KEY_ID
+        sync: false # Set in Render Dashboard
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false # Set in Render Dashboard
+      - key: AWS_REGION
+        value: eu-central-1
+      - key: PYTHON_VERSION
+        value: 3.12.2
+
+  # 2. Frontend: Vite Static Site
+  - type: static
+    name: resonance-frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        fromService:
+          name: resonance-backend
+          type: host
