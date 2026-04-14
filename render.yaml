@@ -22,7 +22,7 @@ services:
         value: 3.12.2
 
   # 2. Frontend: Vite Static Site
-  - type: static
+  - type: static_site
     name: resonance-frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
