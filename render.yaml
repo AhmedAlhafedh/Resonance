@@ -29,7 +29,6 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_BACKEND_URL
-        value: "https://resonance-backend.onrender.com"
         fromService:
           type: host
           name: resonance-backend
