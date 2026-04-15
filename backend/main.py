@@ -40,10 +40,12 @@ logger.addHandler(console_handler)
 app = FastAPI(title="Resonance Local Backend")
 
 # Enable CORS for frontend
+# NOTE: allow_credentials=True is incompatible with allow_origins=["*"]
+# per the CORS spec. Remove credentials or use specific origins.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
@@ -54,6 +56,13 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": f"Internal Server Error: {str(exc)}"},
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
     )
 
 REGION = os.environ.get("AWS_REGION", "eu-central-1")
