@@ -1,57 +1,50 @@
-// ============================================================
-// AWS TRANSCRIBE INTEGRATION POINT
-// ============================================================
-// Current: Returns mock transcript after simulated delay
-// Replace: Use AWS SDK to start a TranscriptionJob and poll for results
-//   import { TranscribeClient, StartTranscriptionJobCommand } from '@aws-sdk/client-transcribe';
-// ============================================================
-
-import type { TranscriptSegment } from '../../types/lecture';
-
-const MOCK_TRANSCRIPT_DELAY_MS = 3000;
-
-/**
- * AWS_INTEGRATION: Replace with Amazon Transcribe job
- * 
- * Real implementation:
- *   1. StartTranscriptionJob with S3 URI as media input
- *   2. Poll GetTranscriptionJob until status is COMPLETED
- *   3. Fetch transcript JSON from the output S3 URI
- *   4. Parse and return the segments
- */
 export async function simulateTranscribe(
-    s3Key: string,
+    s3Uri: string, // Use full S3 URI: s3://bucket-name/key
     onProgress?: (stage: string) => void
 ): Promise<TranscriptSegment[]> {
-    console.log(`[Transcribe] Starting transcription for: ${s3Key}`);
+    const jobName = `transcription-${Date.now()}`;
 
-    onProgress?.('Connecting to Amazon Transcribe...');
-    await new Promise((r) => setTimeout(r, 1000));
+    // 1. Start the Transcription Job
+    onProgress?.('Starting Amazon Transcribe job...');
+    await transcribeClient.send(new StartTranscriptionJobCommand({
+        TranscriptionJobName: jobName,
+        Media: { MediaFileUri: s3Uri },
+        IdentifyLanguage: true, // Or specify LanguageCode: "en-US"
+    }));
 
-    onProgress?.('Processing audio...');
-    await new Promise((r) => setTimeout(r, MOCK_TRANSCRIPT_DELAY_MS));
+    // 2. Poll for Completion
+    let status = 'IN_PROGRESS';
+    let transcriptUri = '';
 
-    onProgress?.('Transcription complete');
+    while (status === 'IN_PROGRESS' || status === 'QUEUED') {
+        onProgress?.('Processing audio...');
+        await new Promise(r => setTimeout(r, 5000)); // Poll every 5 seconds
 
-    // Mock segments — in production, parse from Transcribe JSON output
-    return [
-        {
-            id: `seg-${Date.now()}-1`,
-            timestamp: '00:00:00',
-            speaker: 'Speaker 1',
-            text: 'Welcome to today\'s lecture. We will be covering the key concepts outlined in the course syllabus.',
-        },
-        {
-            id: `seg-${Date.now()}-2`,
-            timestamp: '00:02:30',
-            speaker: 'Speaker 1',
-            text: 'Let\'s start with the foundational theory before moving to practical applications and worked examples.',
-        },
-        {
-            id: `seg-${Date.now()}-3`,
-            timestamp: '00:08:15',
-            speaker: 'Speaker 1',
-            text: 'The key insight here is that we need to understand the underlying principles, not just memorize formulas.',
-        },
-    ];
+        const { TranscriptionJob } = await transcribeClient.send(
+            new GetTranscriptionJobCommand({ TranscriptionJobName: jobName })
+        );
+
+        status = TranscriptionJob?.TranscriptionJobStatus || 'FAILED';
+        transcriptUri = TranscriptionJob?.Transcript?.TranscriptFileUri || '';
+
+        if (status === 'FAILED') throw new Error('Transcription job failed');
+    }
+
+    // 3. Fetch and Parse Transcript Safely
+    onProgress?.('Finalizing transcript...');
+    const response = await fetch(transcriptUri);
+    
+    // Safety check to prevent "Unexpected end of JSON input"
+    const text = await response.text();
+    if (!text) throw new Error("Transcript file is empty");
+
+    const rawData = JSON.parse(text);
+
+    // 4. Map AWS JSON to your TranscriptSegment type
+    return rawData.results.items.map((item: any, index: number) => ({
+        id: `seg-${index}`,
+        timestamp: item.start_time || '00:00:00',
+        speaker: item.speaker_label || 'Speaker 1',
+        text: item.alternatives[0].content,
+    }));
 }
