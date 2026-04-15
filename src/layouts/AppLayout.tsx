@@ -21,8 +21,7 @@ const MOCK_USER: AppUser = {
 };
 
 export default function AppLayout() {
-    const [user, setUser] = useState<AppUser | null>(MOCK_USER);
-    const { } = useUIStore();
+    const [user] = useState<AppUser | null>(MOCK_USER);
 
     useEffect(() => {
         // AWS_INTEGRATION: Replace with actual authentication logic (e.g., Amplify)
