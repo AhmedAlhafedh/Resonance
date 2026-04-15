@@ -19,10 +19,26 @@ export async function uploadToS3(
     });
     
     if (!presignRes.ok) {
-        throw new Error(`Failed to get presigned URL: ${presignRes.statusText}`);
+        let errorDetail = '';
+        try {
+            const errData = await presignRes.json();
+            errorDetail = errData.detail || errData.message || '';
+        } catch {
+            errorDetail = await presignRes.text();
+        }
+        throw new Error(`Failed to get presigned URL (${presignRes.status}): ${errorDetail || presignRes.statusText}`);
     }
     
-    const { url, fields, jobId, s3Key } = await presignRes.json();
+    let data;
+    try {
+        data = await presignRes.json();
+    } catch (e) {
+        const text = await presignRes.text();
+        console.error('[S3] Failed to parse JSON response:', text);
+        throw new Error(`Invalid JSON response from backend: ${text.slice(0, 100)}...`);
+    }
+
+    const { url, fields, jobId, s3Key } = data;
     
     // 2. Upload file via presigned POST using XMLHttpRequest for progress tracking
     return new Promise((resolve, reject) => {

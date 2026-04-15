@@ -92,11 +92,29 @@ export default function UploadModal() {
                     console.debug('[UI-TRACE] Polling status for:', jobId);
                     const res = await fetch(`${backendUrl}/status/${jobId}`);
                     if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        throw new Error(errData.detail || `Status check failed (${res.status})`);
+                        let errorDetail = '';
+                        try {
+                            const errData = await res.json();
+                            errorDetail = errData.detail || errData.message || '';
+                        } catch {
+                            try {
+                                errorDetail = await res.text();
+                            } catch {
+                                errorDetail = res.statusText;
+                            }
+                        }
+                        throw new Error(`Status check failed (${res.status}): ${errorDetail}`);
                     }
                     
-                    const data = await res.json();
+                    let data;
+                    try {
+                        data = await res.json();
+                    } catch (e) {
+                        console.error('[UI-TRACE] Failed to parse status JSON');
+                        // Don't throw here to avoid killing the poll on a transient network glitch
+                        // but log it for debugging
+                        return;
+                    }
                     console.debug('[UI-TRACE] Received status:', data.status, data.detail || '');
                     
                     if (data.status === 'Transcribing') {

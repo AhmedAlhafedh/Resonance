@@ -13,8 +13,15 @@ from google import genai
 from dotenv import load_dotenv
 from mangum import Mangum
 
-# Load environment variables from the root .env file
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+# Load environment variables. Support both local dev (.env) and Render (env vars)
+env_paths = [
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'), # Root
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'),                 # Backend folder
+]
+for p in env_paths:
+    if os.path.exists(p):
+        load_dotenv(p)
+        break
 
 # Track jobs currently being analyzed by Gemini
 active_analysis_jobs = set()
