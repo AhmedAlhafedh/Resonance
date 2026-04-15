@@ -5,9 +5,6 @@ import TopNav from '../components/layout/TopNav';
 import RightPanel from '../components/layout/RightPanel';
 import LectureViewer from '../components/content/LectureViewer';
 import UploadModal from '../components/upload/UploadModal';
-import { simulateAuth } from '../services/aws/cognito';
-import { useUIStore } from '../store/lectureStore';
-
 interface AppUser {
     name: string;
     email: string;
@@ -15,13 +12,20 @@ interface AppUser {
     institution?: string;
 }
 
+// Mock authentication for development
+const MOCK_USER: AppUser = {
+    name: 'Ahmed Basem',
+    email: 'ahmed.basem@university.edu',
+    plan: 'pro',
+    institution: 'MIT',
+};
+
 export default function AppLayout() {
-    const [user, setUser] = useState<AppUser | null>(null);
+    const [user, setUser] = useState<AppUser | null>(MOCK_USER);
     const { } = useUIStore();
 
     useEffect(() => {
-        // AWS_INTEGRATION: Replace with Amplify Auth.getCurrentUser()
-        simulateAuth().then(setUser);
+        // AWS_INTEGRATION: Replace with actual authentication logic (e.g., Amplify)
     }, []);
 
     return (
