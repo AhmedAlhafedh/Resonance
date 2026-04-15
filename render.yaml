@@ -21,11 +21,10 @@ services:
       - key: PYTHON_VERSION
         value: 3.12.2
 
-# 2. Frontend: Vite Static Site
-  - type: static_site
+  # 2. Frontend: Vite Static Site
+  - type: web
     name: resonance-frontend
-    runtime: node   # Static sites use a node environment for building
-    rootDir: frontend
+    runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
@@ -34,9 +33,4 @@ services:
           type: web
           name: resonance-backend
           property: host
-    # This prevents 404 errors when you refresh a page in your React app
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
           
