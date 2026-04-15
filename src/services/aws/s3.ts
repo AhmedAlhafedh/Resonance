@@ -18,24 +18,25 @@ export async function uploadToS3(
         body: JSON.stringify({ filename: file.name })
     });
     
+    const responseText = await presignRes.text();
+    
     if (!presignRes.ok) {
         let errorDetail = '';
         try {
-            const errData = await presignRes.json();
+            const errData = JSON.parse(responseText);
             errorDetail = errData.detail || errData.message || '';
         } catch {
-            errorDetail = await presignRes.text();
+            errorDetail = responseText;
         }
         throw new Error(`Failed to get presigned URL (${presignRes.status}): ${errorDetail || presignRes.statusText}`);
     }
     
     let data;
     try {
-        data = await presignRes.json();
+        data = JSON.parse(responseText);
     } catch (e) {
-        const text = await presignRes.text();
-        console.error('[S3] Failed to parse JSON response:', text);
-        throw new Error(`Invalid JSON response from backend: ${text.slice(0, 100)}...`);
+        console.error('[S3] Failed to parse JSON response:', responseText);
+        throw new Error(`Invalid JSON response from backend: ${responseText.slice(0, 100)}...`);
     }
 
     const { url, fields, jobId, s3Key } = data;
