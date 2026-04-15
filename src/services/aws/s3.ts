@@ -35,10 +35,16 @@ export async function uploadToS3(
     try {
         data = JSON.parse(responseText);
     } catch (e) {
-        console.error('[S3] Failed to parse JSON response:', responseText);
+        console.error('\n=======================================');
+        console.error('[S3 UPLOAD] JSON PARSE ERROR');
+        console.error('URL:', `${backendUrl}/presign`);
+        console.error('HTTP Status:', presignRes.status, presignRes.statusText);
+        console.error('Raw Response Body:', responseText);
+        console.error('=======================================\n');
+        
         // Include the first bit of the response in the message for easier debugging
-        const preview = responseText.slice(0, 200).replace(/<[^>]*>?/gm, '').trim(); 
-        throw new Error(`Invalid JSON from backend. Content: "${preview}..."`);
+        const preview = responseText.slice(0, 150).replace(/<[^>]*>?/gm, '').trim(); 
+        throw new Error(`Invalid JSON from backend (Status: ${presignRes.status}). Content: "${preview}..."`);
     }
 
     const { url, fields, jobId, s3Key } = data;

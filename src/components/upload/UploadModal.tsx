@@ -108,8 +108,13 @@ export default function UploadModal() {
                     try {
                         data = JSON.parse(responseText);
                     } catch (e) {
-                        const preview = responseText.slice(0, 200).replace(/<[^>]*>?/gm, '').trim();
-                        console.error('[UI-TRACE] Failed to parse status JSON. Content:', preview);
+                        console.error('\n=======================================');
+                        console.error('[UI-TRACE] STATUS JSON PARSE ERROR');
+                        console.error('URL:', `${backendUrl}/status/${jobId}`);
+                        console.error('HTTP Status:', res.status, res.statusText);
+                        console.error('Raw Response Body:', responseText);
+                        console.error('=======================================\n');
+                        // Avoid killing the polling loop, but log the failure
                         return;
                     }
                     console.debug('[UI-TRACE] Received status:', data.status, data.detail || '');
