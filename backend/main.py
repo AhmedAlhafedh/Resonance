@@ -4,8 +4,9 @@ import logging
 import uuid
 from typing import List, Optional
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, HTTPException, status, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import boto3
 from botocore.exceptions import ClientError
@@ -46,6 +47,14 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"GLOBAL ERROR: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal Server Error: {str(exc)}"},
+    )
 
 REGION = os.environ.get("AWS_REGION", "eu-central-1")
 s3_client = boto3.client('s3', region_name=REGION)
@@ -109,8 +118,11 @@ async def generate_presigned_url(request: PresignRequest):
         logger.error(f"AWS Credentials Missing: {e}")
         raise HTTPException(status_code=500, detail="Missing AWS credentials. Please set your AWS_ACCESS_KEY_ID in the terminal.")
     except ClientError as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail="Could not generate presigned URL")
+        logger.error(f"S3 ClientError: {e}")
+        raise HTTPException(status_code=500, detail=f"S3 Error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected error in /presign: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 async def perform_summarization(job_id: str, bucket: str, transcript_text: str):
     api_key = os.environ.get("GEMINI_API_KEY")
