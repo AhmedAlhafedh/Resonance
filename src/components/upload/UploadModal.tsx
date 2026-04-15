@@ -108,7 +108,8 @@ export default function UploadModal() {
                     try {
                         data = JSON.parse(responseText);
                     } catch (e) {
-                        console.error('[UI-TRACE] Failed to parse status JSON:', responseText);
+                        const preview = responseText.slice(0, 200).replace(/<[^>]*>?/gm, '').trim();
+                        console.error('[UI-TRACE] Failed to parse status JSON. Content:', preview);
                         return;
                     }
                     console.debug('[UI-TRACE] Received status:', data.status, data.detail || '');
