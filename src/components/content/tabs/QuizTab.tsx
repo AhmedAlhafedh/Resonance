@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, RotateCcw, Trophy, ChevronRight } from 'lucide-react';
+import { CheckCircle2, XCircle, RotateCcw, Trophy, ChevronRight, Undo } from 'lucide-react';
 import { useLectureStore } from '../../../store/lectureStore';
 
 export default function QuizTab() {
@@ -12,6 +12,9 @@ export default function QuizTab() {
     const [selected, setSelected] = useState<Record<string, string>>({});
     const [submitted, setSubmitted] = useState(false);
     const [revealed, setRevealed] = useState<Set<string>>(new Set());
+    const [history, setHistory] = useState<any[]>([]);
+    
+    const updateLecture = useLectureStore((state) => state.updateLecture);
 
     if (questions.length === 0) return (
         <div className="flex flex-col items-center justify-center h-48 text-text-muted">
@@ -27,9 +30,55 @@ export default function QuizTab() {
         setSubmitted(false);
         setRevealed(new Set());
         setCurrentQ(0);
+        setHistory([]);
+    };
+
+    const saveStateToHistory = () => {
+        setHistory(prev => [...prev, { currentQ, selected, revealed: new Set(revealed) }]);
+    };
+
+    const undo = () => {
+        if (history.length === 0) return;
+        const prev = history[history.length - 1];
+        setCurrentQ(prev.currentQ);
+        setSelected(prev.selected);
+        setRevealed(prev.revealed);
+        setHistory(history.slice(0, -1));
+    };
+
+    const submitQuiz = async () => {
+        setSubmitted(true);
+        if (!activeLecture) return;
+        
+        try {
+            const res = await fetch('http://localhost:8000/api/quiz/evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    answers: selected,
+                    questions: questions.map(q => ({ id: q.id, correctOptionId: q.correctOptionId }))
+                })
+            });
+            const data = await res.json();
+            
+            console.log("=== Debugging Output ===");
+            console.log("Frontend State (Selected):", selected);
+            console.log("Total Questions:", questions.length);
+            console.log("Backend JSON Response:", data);
+            
+            if (data && typeof data.confidence === 'number') {
+                updateLecture(activeLecture.id, { confidenceScore: data.confidence });
+            } else {
+                updateLecture(activeLecture.id, { confidenceScore: pct });
+            }
+        } catch (error) {
+            console.error("Failed to evaluate quiz", error);
+            updateLecture(activeLecture.id, { confidenceScore: pct });
+        }
     };
 
     const revealCurrent = () => {
+        saveStateToHistory();
         setRevealed((prev) => new Set([...prev, questions[currentQ].id]));
     };
 
@@ -82,33 +131,64 @@ export default function QuizTab() {
 
     const q = questions[currentQ];
     const isRevealed = revealed.has(q.id);
+    const total_questions = questions.length;
+    const progress = total_questions > 0 ? (currentQ / total_questions) * 100 : 0;
+
+    console.log("Current Index:", currentQ);
+    console.log("Total Questions:", total_questions);
+    console.log("Computed Progress:", progress);
 
     return (
         <div className="animate-fade-in">
             {/* Header */}
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-2">
                 <div>
                     <h3 className="text-sm font-semibold text-text-primary">Quiz</h3>
-                    <p className="text-xs text-text-muted mt-0.5">Question {currentQ + 1} of {questions.length}</p>
+                    <p className="text-xs text-text-muted mt-0.5">Question {currentQ + 1} of {total_questions}</p>
                 </div>
-                <div className="flex gap-1">
-                    {questions.map((_, i) => {
-                        const answered = selected[questions[i].id];
-                        const correct = answered === questions[i].correctOptionId;
-                        return (
-                            <button
-                                key={i}
-                                onClick={() => setCurrentQ(i)}
-                                className={`w-6 h-6 rounded text-[10px] font-bold transition-colors ${i === currentQ ? 'bg-accent text-white' :
-                                    answered ? (correct ? 'bg-emerald-400/20 text-emerald-400' : 'bg-rose-400/20 text-rose-400') :
-                                        'bg-surface-4 text-text-muted hover:bg-surface-5'
-                                    }`}
-                            >
-                                {i + 1}
-                            </button>
-                        );
-                    })}
+                <div className="flex gap-2 items-center">
+                    <button 
+                        onClick={undo}
+                        disabled={history.length === 0}
+                        className={`p-1 rounded transition-colors ${history.length > 0 ? 'text-text-secondary hover:text-text-primary hover:bg-surface-3' : 'text-text-muted opacity-50 cursor-not-allowed'}`}
+                        title="Undo last action"
+                    >
+                        <Undo size={16} />
+                    </button>
+                    <div className="flex gap-1 ml-2">
+                        {questions.map((_, i) => {
+                            const answered = selected[questions[i].id];
+                            const correct = answered === questions[i].correctOptionId;
+                            return (
+                                <button
+                                    key={i}
+                                    onClick={() => {
+                                        if (i !== currentQ) {
+                                            saveStateToHistory();
+                                            setCurrentQ(i);
+                                        }
+                                    }}
+                                    className={`w-6 h-6 rounded text-[10px] font-bold transition-colors ${i === currentQ ? 'bg-accent text-white' :
+                                        answered ? (correct ? 'bg-emerald-400/20 text-emerald-400' : 'bg-rose-400/20 text-rose-400') :
+                                            'bg-surface-4 text-text-muted hover:bg-surface-5'
+                                        }`}
+                                >
+                                    {i + 1}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="h-1 bg-surface-4 rounded-full overflow-hidden mb-5">
+                <motion.div
+                    className="h-full bg-accent rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.3 }}
+                />
             </div>
 
             {/* Question */}
@@ -145,7 +225,12 @@ export default function QuizTab() {
                             key={opt.id}
                             className={classes}
                             whileHover={!showResult ? { scale: 1.01 } : {}}
-                            onClick={() => { if (!isRevealed) setSelected((prev) => ({ ...prev, [q.id]: opt.id })); }}
+                            onClick={() => { 
+                                if (!isRevealed && selected[q.id] !== opt.id) {
+                                    saveStateToHistory();
+                                    setSelected((prev) => ({ ...prev, [q.id]: opt.id })); 
+                                }
+                            }}
                         >
                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${showResult && isCorrect ? 'border-emerald-400 text-emerald-400' :
                                 showResult && isSelected && !isCorrect ? 'border-rose-400 text-rose-400' :
@@ -181,7 +266,10 @@ export default function QuizTab() {
                     <button
                         className="btn-primary flex-1 justify-center"
                         disabled={!selected[q.id]}
-                        onClick={() => setCurrentQ(currentQ + 1)}
+                        onClick={() => {
+                            saveStateToHistory();
+                            setCurrentQ(currentQ + 1);
+                        }}
                     >
                         Next <ChevronRight size={14} />
                     </button>
@@ -189,7 +277,7 @@ export default function QuizTab() {
                     <button
                         className="btn-primary flex-1 justify-center"
                         disabled={Object.keys(selected).length < questions.length}
-                        onClick={() => setSubmitted(true)}
+                        onClick={submitQuiz}
                     >
                         <Trophy size={14} /> Submit Quiz
                     </button>

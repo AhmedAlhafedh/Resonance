@@ -2,7 +2,7 @@ import os
 import json
 import logging
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, status, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -90,6 +90,19 @@ class SummarizeResponse(BaseModel):
     summary: str
     key_points: List[str]
     topics: List[str]
+
+class QuizQuestion(BaseModel):
+    id: str
+    correctOptionId: str
+
+class EvaluateQuizRequest(BaseModel):
+    answers: Dict[str, str]
+    questions: List[QuizQuestion]
+
+class EvaluateQuizResponse(BaseModel):
+    confidence: float
+    correct_answers: int
+    total_questions: int
 
 @app.post("/presign", response_model=PresignResponse)
 async def generate_presigned_url(request: PresignRequest):
@@ -345,6 +358,27 @@ async def get_job_status(job_id: str, background_tasks: BackgroundTasks, bucket:
 
         logger.info(f"[/status/{job_id}] Nothing found for JobID. Status: Uploading")
         return {"status": "Uploading"}
+
+@app.post("/api/quiz/evaluate", response_model=EvaluateQuizResponse)
+async def evaluate_quiz(request: EvaluateQuizRequest):
+    """
+    Evaluates the quiz and returns the confidence score.
+    """
+    total_questions = len(request.questions)
+    
+    if total_questions == 0:
+        return EvaluateQuizResponse(confidence=0, correct_answers=0, total_questions=0)
+        
+    correct_answers = sum(1 for q in request.questions if request.answers.get(q.id) == q.correctOptionId)
+    confidence = (correct_answers / total_questions) * 100
+    
+    logger.info(f"[/api/quiz/evaluate] Evaluated {total_questions} questions. Score: {correct_answers}/{total_questions} ({confidence}%)")
+    
+    return EvaluateQuizResponse(
+        confidence=confidence,
+        correct_answers=correct_answers,
+        total_questions=total_questions
+    )
 
 @app.get("/")
 def read_root():
