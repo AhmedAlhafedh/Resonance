@@ -1,0 +1,8 @@
+Features present in the frontend that are not supported by the backend lambda API:
+
+1. Key Concepts (content.keyConcepts) - The frontend supports rendering a list of key concepts with icons, titles, and descriptions, but the Lambda only returns transcript and summary.
+2. Key Terms (content.keyTerms) - The frontend has a Key Terms tab/section to show a dictionary-like list of terms and definitions.
+3. Flashcards (content.flashcards) - The frontend includes a flashcards UI for studying, which relies on AI-generated question/answer pairs.
+4. Quiz (content.quiz) - The frontend supports an interactive multiple-choice quiz based on the lecture material.
+5. Transcript Segment Timestamps & Speakers - The mock data/frontend architecture expects the transcript to be an array of segments with timestamps (e.g. 00:00:15) and speaker labels, but the API just returns a raw text string.
+6. Short Summary vs Detailed Summary - The frontend distinguishes between a "shortSummary" and a "detailedSummary", but the Lambda only provides a single "summary".
