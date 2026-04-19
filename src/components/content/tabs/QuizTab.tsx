@@ -207,7 +207,7 @@ export default function QuizTab() {
 
             {/* Options */}
             <div className="space-y-2 mb-5">
-                {q.options.map((opt) => {
+                {q.options.map((opt, optIndex) => {
                     const isSelected = selected[q.id] === opt.id;
                     const isCorrect = opt.id === q.correctOptionId;
                     const showResult = isRevealed;
@@ -237,7 +237,7 @@ export default function QuizTab() {
                                     isSelected ? 'border-accent bg-accent text-white' :
                                         'border-border-default text-text-muted'
                                 }`}>
-                                {opt.id.toUpperCase()}
+                                {String.fromCharCode(65 + optIndex)}
                             </div>
                             <p className="text-sm text-text-secondary">{opt.text}</p>
                             {showResult && isCorrect && <CheckCircle2 size={14} className="text-emerald-400 ml-auto flex-shrink-0" />}
