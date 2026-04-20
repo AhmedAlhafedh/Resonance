@@ -25,6 +25,8 @@ export default function QuizTab() {
     );
 
 
+    const score = questions.filter((q) => selected[q.id] === q.correctOptionId).length;
+
     const reset = () => {
         setSelected({});
         setSubmitted(false);
@@ -93,9 +95,6 @@ export default function QuizTab() {
     };
 
     if (submitted) {
-        const score = questions.filter((q) => selected[q.id] === q.correctOptionId).length;
-        const pct = Math.round((score / questions.length) * 100);
-
         return (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="animate-fade-in">
                 {/* Score card */}
